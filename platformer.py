@@ -1,4 +1,6 @@
 import pygame
+import pickle
+from os import path
 
 pygame.init()
 
@@ -15,6 +17,9 @@ pygame.display.set_caption('Platformer')
 tile_size = 50
 game_over = 0
 main_menu = True
+level = 0
+max_levels = 7
+world_data = []
 
 # load images
 sun_img = pygame.image.load('img/sun.png')
@@ -23,11 +28,27 @@ restart_img = pygame.image.load('img/restart_btn.png')
 start_img = pygame.image.load('img/start_btn.png')
 exit_img = pygame.image.load('img/exit_btn.png')
 
+
 #
 # def draw_grid():
 #     for line in range(0, 20):
 #         pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screen_width, line * tile_size))
 #         pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screen_height))
+
+# function to reset level
+def reset_level(level):
+    global world_data, world, pickle_in
+    player.reset(100, screen_height - 130)
+    blob_group.empty()
+    lava_group.empty()
+    exit_group.empty()
+
+    # load in level data using pickle and create world
+    if path.exists(f'level{level}_data'):
+        pickle_in = open(f'level{level}_data', 'rb')
+        world_data = pickle.load(pickle_in)
+    world = World(world_data)
+
 
 class Button:
     def __init__(self, x, y, image):
@@ -139,6 +160,10 @@ class Player:
             if pygame.sprite.spritecollide(self, lava_group, False):
                 game_over = -1
 
+            # check for collision  with Exit gate
+            if pygame.sprite.spritecollide(self, exit_group, False):
+                game_over = 1
+
             # update player coordinates
             self.rect.x += dx
             self.rect.y += dy
@@ -207,6 +232,9 @@ class World:
                 if tile == 6:
                     lava = Lava(col_count * tile_size, row_count * tile_size + tile_size // 2)
                     lava_group.add(lava)
+                if tile == 8:
+                    exit = Exit(col_count * tile_size, row_count * tile_size - tile_size // 2)
+                    exit_group.add(exit)
 
     def draw(self):
         for tile in self.tile_list:
@@ -242,33 +270,25 @@ class Lava(pygame.sprite.Sprite):
         self.rect.y = y
 
 
-world_data = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1],
-    [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 2, 2, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1],
-    [1, 7, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1],
-    [1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 2, 0, 0, 4, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 2, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 2, 2, 2, 1],
-    [1, 0, 0, 0, 0, 0, 2, 2, 2, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-]
+class Exit(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        img = pygame.image.load('img/exit.png')
+        self.image = pygame.transform.scale(img, (tile_size, tile_size * 1.5))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
 
 player = Player(100, screen_height - 130)
 blob_group = pygame.sprite.Group()
 lava_group = pygame.sprite.Group()
+exit_group = pygame.sprite.Group()
 
+# load in level data using pickle and create world
+if path.exists(f'level{level}_data'):
+    pickle_in = open(f'level{level}_data', 'rb')
+    world_data = pickle.load(pickle_in)
 world = World(world_data)
 
 # create buttons
@@ -299,13 +319,29 @@ while run:
 
         blob_group.draw(screen)
         lava_group.draw(screen)
+        exit_group.draw(screen)
         player.update()
 
         # if player has died
         if game_over == -1:
             if restart_button.draw():
-                player.reset(100, screen_height - 130)
+                reset_level(level)
                 game_over = 0
+
+        # if player has completed the level
+        if game_over == 1:
+            # reset game and go to next leve
+            level += 1
+            if level <= max_levels:
+                # reset level
+                world_data = []
+                reset_level(level)
+                game_over = 0
+            else:
+                if restart_button.draw():
+                    # reset level
+                    level = 1
+                    reset_level(level)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
