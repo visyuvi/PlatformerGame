@@ -24,7 +24,7 @@ font_score = pygame.font.SysFont('Bauhaus 93', 30)
 tile_size = 50
 game_over = 0
 main_menu = True
-level = 0
+level = 3
 max_levels = 7
 world_data = []
 score = 0
@@ -69,6 +69,7 @@ def reset_level(level):
     blob_group.empty()
     lava_group.empty()
     exit_group.empty()
+    platform_group.empty()
 
     # load in level data using pickle and create world
     if path.exists(f'level{level}_data'):
@@ -115,6 +116,7 @@ class Player:
         dx = 0
         dy = 0
         walk_cooldown = 5
+        col_threshold = 20
 
         if game_over == 0:
             # get key presses
@@ -194,6 +196,28 @@ class Player:
             if pygame.sprite.spritecollide(self, exit_group, False):
                 game_over = 1
 
+            # check for collision with platforms
+            for platform in platform_group:
+                # collision in the x direction
+                if platform.rect.colliderect(self.rect.x + dx, self.rect.y, self.width, self.height):
+                    dx = 0
+                # collision in the y direction
+                if platform.rect.colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
+                    # check if below platform
+                    if abs((self.rect.top + dy) - platform.rect.bottom) < col_threshold:
+                        self.vel_y = 0
+                        dy = platform.rect.bottom - self.rect.top
+
+                    # check if above platform
+                    elif abs((self.rect.bottom + dy) - platform.rect.top) < col_threshold:
+                        self.rect.bottom = platform.rect.top - 1
+                        dy = 0
+                        self.in_air = False
+
+                    # move sideways with the platform
+                    if platform.move_x:
+                        self.rect.x += platform.move_direction
+
             # update player coordinates
             self.rect.x += dx
             self.rect.y += dy
@@ -205,7 +229,6 @@ class Player:
                 self.rect.y -= 5
 
         screen.blit(self.image, self.rect)
-        pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
 
     def reset(self, x, y):
         self.images_right = []
@@ -280,7 +303,6 @@ class World:
     def draw(self):
         for tile in self.tile_list:
             screen.blit(tile[0], tile[1])
-            pygame.draw.rect(screen, (255, 255, 255), tile[1], 2)
 
 
 class Enemy(pygame.sprite.Sprite):
